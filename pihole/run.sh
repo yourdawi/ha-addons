@@ -11,12 +11,21 @@ if [ ! -s "$OPTIONS_FILE" ]; then
   log_warn "No options.json found at $OPTIONS_FILE; using defaults where possible"
 fi
 
+JQ_AVAILABLE=true
+if ! command -v jq >/dev/null 2>&1; then
+  JQ_AVAILABLE=false
+  log_warn "jq not found in base image; will read options from environment if provided"
+fi
+
 get_opt() {
   local key=$1; local def=${2-}
-  if [ -s "$OPTIONS_FILE" ]; then
+  if [ "$JQ_AVAILABLE" = true ] && [ -s "$OPTIONS_FILE" ]; then
     jq -r --arg k "$key" 'try .[$k] // empty' "$OPTIONS_FILE"
   else
-    echo "$def"
+    # Fallback: ENV variable with uppercased key
+    local env_key
+    env_key=$(echo "$key" | tr '[:lower:]' '[:upper:]')
+    eval echo "\${$env_key:-$def}"
   fi
 }
 
