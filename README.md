@@ -15,4 +15,3 @@ This repository hosts multiple Home Assistant add-ons. Add this repository once 
 
 ## License
 Please check each upstream project’s license. This repository provides packaging and runtime scripts for Home Assistant.
-Die SpotConnect-Binaries stammen aus dem Upstream-Projekt von [philippe44](https://github.com/philippe44/SpotConnect). Bitte beachte deren Lizenzbedingungen. Dieses Add-on-Repository enthält nur das Startskript und die Logik zur Bereitstellung innerhalb von Home Assistant.
