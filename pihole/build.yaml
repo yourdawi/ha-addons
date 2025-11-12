@@ -1,0 +1,5 @@
+---
+build_from:
+  aarch64: pihole/pihole:latest
+  amd64: pihole/pihole:latest
+  armv7: pihole/pihole:latest
