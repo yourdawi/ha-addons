@@ -1,5 +1,5 @@
 name: SpotConnect
-version: 0.0.3
+version: 0.0.4
 slug: spotconnect
 description: "Create virtual AirPlay/DLNA devices for Spotify Connect"
 arch:
@@ -13,6 +13,8 @@ init: false
 startup: services
 boot: auto
 url: https://github.com/yourdawi/ha-addons
+map:
+  - config:rw
 options:
   spotconnect_mode: raop
   log_level: info

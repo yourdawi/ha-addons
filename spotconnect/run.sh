@@ -108,11 +108,19 @@ if [ -f "$VERSION_FILE" ]; then
   CURRENT_VERSION=$(cat "$VERSION_FILE" 2>/dev/null || echo "none")
 fi
 
+# Debug-Hinweis zur Versionsdatei
+if [ -f "$VERSION_FILE" ]; then
+  bashio::log.info "Detected version file: $VERSION_FILE -> $(cat "$VERSION_FILE" 2>/dev/null || echo "<unreadable>")"
+else
+  bashio::log.info "No version file found at: $VERSION_FILE"
+fi
+
 if ! bashio::config.true 'cache_binaries' || [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
   bashio::log.info "Updating SpotConnect from ${CURRENT_VERSION} to ${LATEST_VERSION}"
   download_release "$LATEST_VERSION"
   echo "$LATEST_VERSION" > "$VERSION_FILE"
   chmod 644 "$VERSION_FILE" || true
+  bashio::log.info "Wrote version file: $VERSION_FILE"
 else
   bashio::log.info "Using cached SpotConnect version ${CURRENT_VERSION}"
 fi
@@ -158,11 +166,18 @@ fi
 
 bashio::log.info "Starting SpotConnect (${LATEST_VERSION}) with mode: $SPOTCONNECT_MODE"
 
+# Setze Arbeitsverzeichnis auf CONFIG_DIR, damit ./config.xml dort landet
+cd "$CONFIG_DIR" || true
+bashio::log.info "Working directory set to: $(pwd)"
+
 CMD_ARGS=( -Z -J "$CONFIG_DIR" -I )
 
 CONFIG_FILE="$CONFIG_DIR/config.xml"
 if [ -s "$CONFIG_FILE" ]; then
+  bashio::log.info "Using configuration file: $CONFIG_FILE"
   CMD_ARGS+=( -x "$CONFIG_FILE" )
+else
+  bashio::log.info "No configuration file yet at: $CONFIG_FILE (SpotConnect will create ./config.xml on first run)"
 fi
 
 if [ -n "${NAME_FORMAT:-}" ]; then
