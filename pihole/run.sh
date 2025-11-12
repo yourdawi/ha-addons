@@ -37,11 +37,12 @@ DNS_LISTEN=$(get_opt 'dns_listening_mode' 'all')
 ENABLE_DHCP=$(get_opt 'enable_dhcp' 'false')
 ENABLE_NTP=$(get_opt 'enable_ntp' 'false')
 PERSIST_DNSMASQ_D=$(get_opt 'persist_dnsmasq_d' 'false')
+UPSTREAM_DNS=$(get_opt 'upstream_dns' '')
 
 CONFIG_DIR="/config/pihole"
 PIHOLE_ETC="$CONFIG_DIR/etc-pihole"
 DNSMASQ_D="$CONFIG_DIR/etc-dnsmasq.d"
-mkdir -p "$PIHOLE_ETC" "$DNSMASQ_D"
+mkdir -p "$PIHOLE_ETC"
 
 log_info "Starting Pi-hole add-on (log level: ${LOG_LEVEL})"
 
@@ -51,39 +52,56 @@ if [ ! -L /etc/pihole ] && [ -d /etc/pihole ]; then
 fi
 ln -snf "$PIHOLE_ETC" /etc/pihole
 
-if [ ! -L /etc/dnsmasq.d ] && [ -d /etc/dnsmasq.d ]; then
-  rm -rf /etc/dnsmasq.d || true
+if [ "${PERSIST_DNSMASQ_D}" = "true" ]; then
+  mkdir -p "$DNSMASQ_D"
+  if [ ! -L /etc/dnsmasq.d ] && [ -d /etc/dnsmasq.d ]; then
+    rm -rf /etc/dnsmasq.d || true
+  fi
+  ln -snf "$DNSMASQ_D" /etc/dnsmasq.d
 fi
-ln -snf "$DNSMASQ_D" /etc/dnsmasq.d
 
-# Seed required files/directories to help initial startup
-touch "$PIHOLE_ETC/gravity.db" "$PIHOLE_ETC/pihole-FTL.db" || true
-mkdir -p "$PIHOLE_ETC/custom.list" "$PIHOLE_ETC/migration_backup" || true
+# Ensure expected files/dirs exist with correct types
+# custom.list should be a file (not a directory)
+if [ -d "$PIHOLE_ETC/custom.list" ]; then
+  rm -rf "$PIHOLE_ETC/custom.list" || true
+fi
+touch "$PIHOLE_ETC/custom.list" || true
+mkdir -p "$PIHOLE_ETC/migration_backup" || true
+
+# If databases exist but are zero bytes (from previous failed attempts), remove to let FTL recreate
+for db in "$PIHOLE_ETC/gravity.db" "$PIHOLE_ETC/pihole-FTL.db"; do
+  if [ -f "$db" ] && [ ! -s "$db" ]; then
+    rm -f "$db" || true
+  fi
+done
+
+# Validate gravity.db contains expected schema (table 'info'). If not, remove to let Pi-hole rebuild it.
+if [ -f "$PIHOLE_ETC/gravity.db" ] && command -v sqlite3 >/dev/null 2>&1; then
+  if ! sqlite3 "$PIHOLE_ETC/gravity.db" "SELECT 1 FROM sqlite_master WHERE type='table' AND name='info';" | grep -q 1; then
+    log_warn "gravity.db appears invalid/missing 'info' table. Removing to trigger rebuild."
+    rm -f "$PIHOLE_ETC/gravity.db" || true
+  fi
+fi
 
 # Environment variables consumed by upstream Pi-hole entrypoint
 export TZ="${TZ_OPT}"
 export PIHOLE_ETC_DIR="/etc/pihole"
-export DNSMASQ_DIR="/etc/dnsmasq.d"
+if [ "${PERSIST_DNSMASQ_D}" = "true" ]; then
+  export DNSMASQ_DIR="/etc/dnsmasq.d"
+fi
 if [ -n "${WEB_PASS:-}" ] && [ "$WEB_PASS" != "null" ]; then
   export FTLCONF_webserver_api_password="${WEB_PASS}"
 fi
+if [ -n "${UPSTREAM_DNS:-}" ] && [ "$UPSTREAM_DNS" != "null" ]; then
+  export FTLCONF_dns_upstreams="${UPSTREAM_DNS}"
+fi
 case "${DNS_LISTEN}" in
-  all|local|single) export FTLCONF_dns_listeningMode="${DNS_LISTEN}" ;;
+  all|local|single) export FTLCONF_dns_listeningMode="${DNS_LISTEN^^}" ;;
   *) log_warn "Unknown dns_listening_mode '${DNS_LISTEN}', defaulting to 'all'"; export FTLCONF_dns_listeningMode="all" ;;
 esac
 
-# Optional features requiring capabilities and ports
-if [ "${ENABLE_DHCP}" = "true" ]; then
-  export FTLCONF_dhcp_enabled="true"
-else
-  export FTLCONF_dhcp_enabled="false"
-fi
-
-if [ "${ENABLE_NTP}" = "true" ]; then
-  export FTLCONF_ntp_enabled="true"
-else
-  export FTLCONF_ntp_enabled="false"
-fi
+# Note: Enabling DHCP/NTP is currently expected to be configured via the Pi-hole UI in v6.
+# We no longer export FTLCONF_dhcp_enabled / FTLCONF_ntp_enabled as they are not recognized.
 
 # Use external /etc/dnsmasq.d directory (mostly for migration from v5)
 if [ "${PERSIST_DNSMASQ_D}" = "true" ]; then

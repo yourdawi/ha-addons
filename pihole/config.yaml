@@ -1,5 +1,5 @@
 name: Pi-hole
-version: 0.0.4
+version: 0.0.6
 slug: pihole
 description: "Network-wide ad blocking via Pi-hole inside Home Assistant"
 arch:
@@ -40,6 +40,7 @@ options:
   enable_ntp: false
   log_level: info
   persist_dnsmasq_d: false
+  upstream_dns: ""
 schema:
   tz: str
   web_password: str?
@@ -48,3 +49,4 @@ schema:
   enable_ntp: bool?
   log_level: list(error|warn|info|debug)
   persist_dnsmasq_d: bool?
+  upstream_dns: str?
