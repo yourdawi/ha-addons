@@ -52,9 +52,48 @@ download_release() {
   rm -rf "$WORKDIR"/*
   unzip -q "/tmp/${zip}" -d "$WORKDIR"
   rm "/tmp/${zip}"
-  while IFS= read -r f; do
-    cp "$f" "$BIN_DIR/" || true
-  done < <(find "$WORKDIR" -maxdepth 2 -type f \( -name 'spotraop*' -o -name 'spotupnp*' \))
+  local kept=()
+  copy_best() {
+    local mode_bin="$1"; shift
+    local cands a p f
+    cands=$(arch_candidates)
+    local patterns=()
+    if [ "$PREFER_STATIC" = "yes" ]; then
+      for a in $cands; do patterns+=("${mode_bin}-linux-${a}-static" "${mode_bin}-${a}-static"); done
+      for a in $cands; do patterns+=("${mode_bin}-linux-${a}" "${mode_bin}-${a}"); done
+    else
+      for a in $cands; do patterns+=("${mode_bin}-linux-${a}" "${mode_bin}-${a}"); done
+      for a in $cands; do patterns+=("${mode_bin}-linux-${a}-static" "${mode_bin}-${a}-static"); done
+    fi
+    patterns+=("${mode_bin}")
+    for p in "${patterns[@]}"; do
+      f=$(find "$WORKDIR" -type f -name "$p" -o -name "$p.exe" | head -n1 || true)
+      if [ -n "$f" ] && [ -f "$f" ]; then
+        local base
+        base=$(basename "$f")
+        bashio::log.info "Caching binary for ${mode_bin}: $base"
+        cp "$f" "$BIN_DIR/$base" || true
+        chmod +x "$BIN_DIR/$base" || true
+        kept+=("$BIN_DIR/$base")
+        return 0
+      fi
+    done
+    bashio::log.warning "No matching binary found for ${mode_bin}"
+    return 1
+  }
+
+  copy_best spotraop || true
+  copy_best spotupnp || true
+
+  while IFS= read -r existing; do
+    local keep=false
+    for k in "${kept[@]}"; do
+      if [ "$existing" = "$k" ]; then keep=true; break; fi
+    done
+    if [ "$keep" = false ]; then rm -f "$existing" || true; fi
+  done < <(find "$BIN_DIR" -maxdepth 1 -type f \( -name 'spotraop*' -o -name 'spotupnp*' \))
+
+  rm -rf "$WORKDIR" || true
 }
 
 arch_candidates() {
@@ -108,21 +147,22 @@ if [ -f "$VERSION_FILE" ]; then
   CURRENT_VERSION=$(cat "$VERSION_FILE" 2>/dev/null || echo "none")
 fi
 
-# Debug-Hinweis zur Versionsdatei
 if [ -f "$VERSION_FILE" ]; then
   bashio::log.info "Detected version file: $VERSION_FILE -> $(cat "$VERSION_FILE" 2>/dev/null || echo "<unreadable>")"
 else
   bashio::log.info "No version file found at: $VERSION_FILE"
 fi
 
-if ! bashio::config.true 'cache_binaries' || [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
+LATEST_CACHE_KEY="${LATEST_VERSION}|static=${PREFER_STATIC}|arch=${ARCH}"
+if ! bashio::config.true 'cache_binaries' || [ "$CURRENT_VERSION" != "$LATEST_CACHE_KEY" ]; then
   bashio::log.info "Updating SpotConnect from ${CURRENT_VERSION} to ${LATEST_VERSION}"
   download_release "$LATEST_VERSION"
-  echo "$LATEST_VERSION" > "$VERSION_FILE"
+  echo "$LATEST_CACHE_KEY" > "$VERSION_FILE"
   chmod 644 "$VERSION_FILE" || true
   bashio::log.info "Wrote version file: $VERSION_FILE"
 else
-  bashio::log.info "Using cached SpotConnect version ${CURRENT_VERSION}"
+  CURRENT_VERSION_DISPLAY="${CURRENT_VERSION%%|*}"
+  bashio::log.info "Using cached SpotConnect version ${CURRENT_VERSION_DISPLAY}"
 fi
 
 select_binary_from_cache() {
@@ -166,14 +206,11 @@ fi
 
 bashio::log.info "Starting SpotConnect (${LATEST_VERSION}) with mode: $SPOTCONNECT_MODE"
 
-# Setze Arbeitsverzeichnis auf CONFIG_DIR, damit ./config.xml dort landet
 cd "$CONFIG_DIR" || true
 bashio::log.info "Working directory set to: $(pwd)"
 
-# Gemeinsame Startargumente (ohne -x; wird ggf. später ergänzt)
 CMD_ARGS=( -Z -J "$CONFIG_DIR" -I )
 
-# Map optional settings to CLI (gelten sowohl beim Initial-Lauf als auch danach)
 if [ -n "${NAME_FORMAT:-}" ]; then
   CMD_ARGS+=( -N "$NAME_FORMAT" )
 fi
@@ -212,7 +249,6 @@ fi
 CONFIG_FILE="$CONFIG_DIR/config.xml"
 if [ ! -s "$CONFIG_FILE" ]; then
   bashio::log.info "No configuration file yet at: $CONFIG_FILE — starting once to let SpotConnect generate it"
-  # Starte ohne -x, damit SpotConnect ./config.xml anlegt
   "$BIN_PATH" "${CMD_ARGS[@]}" &
   GEN_PID=$!
   for i in $(seq 1 30); do
@@ -229,7 +265,6 @@ if [ ! -s "$CONFIG_FILE" ]; then
   fi
 fi
 
-# Ab hier immer -x nutzen, wenn vorhanden
 if [ -s "$CONFIG_FILE" ]; then
   bashio::log.info "Using configuration file: $CONFIG_FILE"
   CMD_ARGS+=( -x "$CONFIG_FILE" )
