@@ -18,11 +18,16 @@ ARCH=$(bashio::info.arch)
 
 CONFIG_DIR="/config/spotconnect"
 mkdir -p "$CONFIG_DIR"
-WORKDIR="/opt/spotconnect"
+BIN_DIR="$CONFIG_DIR/bin"
+mkdir -p "$BIN_DIR"
+WORKDIR="/tmp/spotconnect_unpack"
 mkdir -p "$WORKDIR"
 
 UPSTREAM_API="https://api.github.com/repos/philippe44/SpotConnect/releases/latest"
-VERSION_FILE="/config/spotconnect/version.txt"
+VERSION_FILE="$CONFIG_DIR/version.txt"
+if [ ! -f "$VERSION_FILE" ] && [ -f "/data/spotconnect/version.txt" ]; then
+  cp "/data/spotconnect/version.txt" "$VERSION_FILE" 2>/dev/null || true
+fi
 
 fetch_latest_version() {
   local tag
@@ -44,8 +49,12 @@ download_release() {
     bashio::log.fatal "Failed to download: $url"
     exit 1
   fi
+  rm -rf "$WORKDIR"/*
   unzip -q "/tmp/${zip}" -d "$WORKDIR"
   rm "/tmp/${zip}"
+  while IFS= read -r f; do
+    cp "$f" "$BIN_DIR/" || true
+  done < <(find "$WORKDIR" -maxdepth 2 -type f \( -name 'spotraop*' -o -name 'spotupnp*' \))
 }
 
 arch_candidates() {
@@ -99,10 +108,8 @@ if [ -f "$VERSION_FILE" ]; then
   CURRENT_VERSION=$(cat "$VERSION_FILE" 2>/dev/null || echo "none")
 fi
 
-# Entscheide Update anhand cache_binaries und Versionsvergleich
 if ! bashio::config.true 'cache_binaries' || [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
   bashio::log.info "Updating SpotConnect from ${CURRENT_VERSION} to ${LATEST_VERSION}"
-  rm -rf "$WORKDIR"/*
   download_release "$LATEST_VERSION"
   echo "$LATEST_VERSION" > "$VERSION_FILE"
   chmod 644 "$VERSION_FILE" || true
@@ -110,24 +117,54 @@ else
   bashio::log.info "Using cached SpotConnect version ${CURRENT_VERSION}"
 fi
 
-BIN_PATH=$(select_binary)
+select_binary_from_cache() {
+  local mode_bin
+  case "$SPOTCONNECT_MODE" in
+    raop) mode_bin="spotraop" ;;
+    upnp) mode_bin="spotupnp" ;;
+  esac
+  local candidates
+  candidates=$(arch_candidates)
+  local patterns=()
+  if [ "$PREFER_STATIC" = "yes" ]; then
+    for a in $candidates; do
+      patterns+=("${mode_bin}-linux-${a}-static" "${mode_bin}-${a}-static")
+    done
+  fi
+  for a in $candidates; do
+    patterns+=("${mode_bin}-linux-${a}" "${mode_bin}-${a}")
+  done
+  patterns+=("${mode_bin}")
+  local p
+  for p in "${patterns[@]}"; do
+    if [ -f "$BIN_DIR/$p" ]; then
+      echo "$BIN_DIR/$p"
+      return 0
+    fi
+  done
+  return 1
+}
+
+if BIN_PATH=$(select_binary_from_cache); then
+  :
+else
+  BIN_PATH=$(select_binary)
+fi
 chmod +x "$BIN_PATH"
+
+if [[ "$BIN_PATH" == "$BIN_DIR"/* ]]; then
+  rm -rf "$WORKDIR" || true
+fi
 
 bashio::log.info "Starting SpotConnect (${LATEST_VERSION}) with mode: $SPOTCONNECT_MODE"
 
 CMD_ARGS=( -Z -J "$CONFIG_DIR" -I )
 
-# Ensure a config.xml exists; if not, generate a default one
 CONFIG_FILE="$CONFIG_DIR/config.xml"
-if [ ! -s "$CONFIG_FILE" ]; then
-  bashio::log.info "Generating default config file at $CONFIG_FILE"
-  "$BIN_PATH" -i "$CONFIG_FILE" || true
+if [ -s "$CONFIG_FILE" ]; then
+  CMD_ARGS+=( -x "$CONFIG_FILE" )
 fi
 
-# Always use config file
-CMD_ARGS+=( -x "$CONFIG_FILE" )
-
-# Map optional settings to CLI
 if [ -n "${NAME_FORMAT:-}" ]; then
   CMD_ARGS+=( -N "$NAME_FORMAT" )
 fi
