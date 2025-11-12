@@ -170,16 +170,10 @@ bashio::log.info "Starting SpotConnect (${LATEST_VERSION}) with mode: $SPOTCONNE
 cd "$CONFIG_DIR" || true
 bashio::log.info "Working directory set to: $(pwd)"
 
+# Gemeinsame Startargumente (ohne -x; wird ggf. später ergänzt)
 CMD_ARGS=( -Z -J "$CONFIG_DIR" -I )
 
-CONFIG_FILE="$CONFIG_DIR/config.xml"
-if [ -s "$CONFIG_FILE" ]; then
-  bashio::log.info "Using configuration file: $CONFIG_FILE"
-  CMD_ARGS+=( -x "$CONFIG_FILE" )
-else
-  bashio::log.info "No configuration file yet at: $CONFIG_FILE (SpotConnect will create ./config.xml on first run)"
-fi
-
+# Map optional settings to CLI (gelten sowohl beim Initial-Lauf als auch danach)
 if [ -n "${NAME_FORMAT:-}" ]; then
   CMD_ARGS+=( -N "$NAME_FORMAT" )
 fi
@@ -213,6 +207,32 @@ fi
 
 if [ "$SPOTCONNECT_MODE" = "upnp" ] && [ "${ENABLE_FILECACHE:-false}" = "true" ]; then
   CMD_ARGS+=( -C )
+fi
+
+CONFIG_FILE="$CONFIG_DIR/config.xml"
+if [ ! -s "$CONFIG_FILE" ]; then
+  bashio::log.info "No configuration file yet at: $CONFIG_FILE — starting once to let SpotConnect generate it"
+  # Starte ohne -x, damit SpotConnect ./config.xml anlegt
+  "$BIN_PATH" "${CMD_ARGS[@]}" &
+  GEN_PID=$!
+  for i in $(seq 1 30); do
+    if [ -s "$CONFIG_FILE" ]; then
+      bashio::log.info "Configuration file created: $CONFIG_FILE"
+      break
+    fi
+    sleep 1
+  done
+  if kill -0 "$GEN_PID" 2>/dev/null; then
+    bashio::log.info "Stopping initial SpotConnect instance to relaunch with -x"
+    kill "$GEN_PID" 2>/dev/null || true
+    wait "$GEN_PID" 2>/dev/null || true
+  fi
+fi
+
+# Ab hier immer -x nutzen, wenn vorhanden
+if [ -s "$CONFIG_FILE" ]; then
+  bashio::log.info "Using configuration file: $CONFIG_FILE"
+  CMD_ARGS+=( -x "$CONFIG_FILE" )
 fi
 
 exec "$BIN_PATH" "${CMD_ARGS[@]}"
