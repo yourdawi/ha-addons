@@ -1,5 +1,5 @@
 name: Pi-hole
-version: 0.0.2
+version: 0.0.3
 slug: pihole
 description: "Network-wide ad blocking via Pi-hole inside Home Assistant"
 arch:
@@ -11,7 +11,7 @@ init: false
 startup: services
 boot: auto
 url: https://github.com/yourdawi/ha-addons
-webui: http://[HOST]:[PORT:80]
+webui: http://[HOST]:[PORT:80]/admin/
 map:
   - config:rw
 privileged:
@@ -19,10 +19,10 @@ privileged:
   - SYS_TIME
   - SYS_NICE
 ports:
-  53/tcp: null
-  53/udp: null
-  80/tcp: null
-  443/tcp: null
+  53/tcp: 53
+  53/udp: 53
+  80/tcp: 80
+  443/tcp: 443
   67/udp: null
   123/udp: null
 ports_description:
