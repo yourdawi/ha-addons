@@ -114,14 +114,33 @@ fi
 PIHOLE_USER="pihole"
 PIHOLE_GROUP="pihole"
 if id -u "$PIHOLE_USER" >/dev/null 2>&1; then
-  chown -R "$PIHOLE_USER":"$PIHOLE_GROUP" "$PIHOLE_ETC" "$DNSMASQ_D" || true
+  chown -R "$PIHOLE_USER":"$PIHOLE_GROUP" "$PIHOLE_ETC" || true
+  if [ "${PERSIST_DNSMASQ_D}" = "true" ] && [ -d "$DNSMASQ_D" ]; then
+    chown -R "$PIHOLE_USER":"$PIHOLE_GROUP" "$DNSMASQ_D" || true
+  fi
 else
-  # Fallback: keep root ownership if user doesn't exist (unexpected on official image)
-  chown -R root:root "$PIHOLE_ETC" "$DNSMASQ_D" || true
+  chown -R root:root "$PIHOLE_ETC" || true
+  if [ "${PERSIST_DNSMASQ_D}" = "true" ] && [ -d "$DNSMASQ_D" ]; then
+    chown -R root:root "$DNSMASQ_D" || true
+  fi
 fi
-chmod -R u+rwX,go-rwx "$PIHOLE_ETC" "$DNSMASQ_D" || true
+chmod -R u+rwX,go-rwx "$PIHOLE_ETC" || true
+if [ "${PERSIST_DNSMASQ_D}" = "true" ] && [ -d "$DNSMASQ_D" ]; then
+  chmod -R u+rwX,go-rwx "$DNSMASQ_D" || true
+fi
 
 # Pi-hole upstream uses s6-overlay; typical entrypoint is /s6-init
+# Pre-populate gravity if missing to avoid DB read errors
+if [ ! -f "$PIHOLE_ETC/gravity.db" ]; then
+  log_info "gravity.db missing — running initial gravity update"
+  if command -v pihole >/dev/null 2>&1; then
+    # Force update (-f) to rebuild lists; ignore failures so container can still start
+    pihole -g -f || log_warn "Initial gravity update failed (will rely on FTL retry)"
+  else
+    log_warn "pihole command not found; cannot pre-generate gravity.db"
+  fi
+fi
+
 if command -v /s6-init >/dev/null 2>&1; then
   exec /s6-init
 fi
