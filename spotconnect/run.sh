@@ -117,11 +117,15 @@ bashio::log.info "Starting SpotConnect (${LATEST_VERSION}) with mode: $SPOTCONNE
 
 CMD_ARGS=( -Z -J "$CONFIG_DIR" -I )
 
-# Use specific config file only if it exists and is non-empty
+# Ensure a config.xml exists; if not, generate a default one
 CONFIG_FILE="$CONFIG_DIR/config.xml"
-if [ -s "$CONFIG_FILE" ]; then
-  CMD_ARGS+=( -x "$CONFIG_FILE" )
+if [ ! -s "$CONFIG_FILE" ]; then
+  bashio::log.info "Generating default config file at $CONFIG_FILE"
+  "$BIN_PATH" -i "$CONFIG_FILE" || true
 fi
+
+# Always use config file
+CMD_ARGS+=( -x "$CONFIG_FILE" )
 
 # Map optional settings to CLI
 if [ -n "${NAME_FORMAT:-}" ]; then
@@ -132,7 +136,7 @@ if [ -n "${VORBIS_RATE:-}" ]; then
   CMD_ARGS+=( -r "$VORBIS_RATE" )
 fi
 
-if [ -n "${HTTP_CONTENT_LENGTH:-}" ]; then
+if [ "$SPOTCONNECT_MODE" = "upnp" ] && [ -n "${HTTP_CONTENT_LENGTH:-}" ]; then
   case "$HTTP_CONTENT_LENGTH" in
     chunked) CMD_ARGS+=( -g -3 ) ;;
     no_length) CMD_ARGS+=( -g -1 ) ;;
@@ -155,7 +159,7 @@ if [ -n "$NETWORK_SELECT" ]; then
   fi
 fi
 
-if [ "${ENABLE_FILECACHE:-false}" = "true" ]; then
+if [ "$SPOTCONNECT_MODE" = "upnp" ] && [ "${ENABLE_FILECACHE:-false}" = "true" ]; then
   CMD_ARGS+=( -C )
 fi
 
