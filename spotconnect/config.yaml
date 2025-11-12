@@ -1,0 +1,39 @@
+name: SpotConnect
+version: 0.0.0
+slug: spotconnect
+description: "Create virtual AirPlay/DLNA devices for Spotify Connect"
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+host_network: true
+init: false
+startup: services
+boot: auto
+url: https://github.com/yourdawi/ha-addons
+options:
+  spotconnect_mode: raop
+  log_level: info
+  network_select: ""
+  prefer_static: "yes"
+  cache_binaries: true
+  name_format: ""
+  vorbis_rate: 320
+  http_content_length: chunked
+  http_port_range: ""
+  upnp_port: 0
+  enable_filecache: false
+schema:
+  spotconnect_mode: list(raop|upnp)
+  log_level: list(error|warn|info|debug)
+  network_select: str?
+  prefer_static: list(yes|no)
+  cache_binaries: bool?
+  name_format: str?
+  vorbis_rate: list(96|160|320)?
+  http_content_length: list(chunked|auto|no_length|fake_length)?
+  http_port_range: str?
+  upnp_port: int?
+  enable_filecache: bool?
