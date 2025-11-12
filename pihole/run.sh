@@ -56,8 +56,14 @@ if [ ! -L /etc/dnsmasq.d ] && [ -d /etc/dnsmasq.d ]; then
 fi
 ln -snf "$DNSMASQ_D" /etc/dnsmasq.d
 
+# Seed required files/directories to help initial startup
+touch "$PIHOLE_ETC/gravity.db" "$PIHOLE_ETC/pihole-FTL.db" || true
+mkdir -p "$PIHOLE_ETC/custom.list" "$PIHOLE_ETC/migration_backup" || true
+
 # Environment variables consumed by upstream Pi-hole entrypoint
 export TZ="${TZ_OPT}"
+export PIHOLE_ETC_DIR="/etc/pihole"
+export DNSMASQ_DIR="/etc/dnsmasq.d"
 if [ -n "${WEB_PASS:-}" ] && [ "$WEB_PASS" != "null" ]; then
   export FTLCONF_webserver_api_password="${WEB_PASS}"
 fi
@@ -86,8 +92,15 @@ fi
 
 # SYS_NICE capability provided via add-on privileges; no extra handling needed
 
-# Ensure correct permissions
-chown -R root:root "$PIHOLE_ETC" "$DNSMASQ_D" || true
+# Ensure correct permissions: Pi-hole expects ownership by user 'pihole'
+PIHOLE_USER="pihole"
+PIHOLE_GROUP="pihole"
+if id -u "$PIHOLE_USER" >/dev/null 2>&1; then
+  chown -R "$PIHOLE_USER":"$PIHOLE_GROUP" "$PIHOLE_ETC" "$DNSMASQ_D" || true
+else
+  # Fallback: keep root ownership if user doesn't exist (unexpected on official image)
+  chown -R root:root "$PIHOLE_ETC" "$DNSMASQ_D" || true
+fi
 chmod -R u+rwX,go-rwx "$PIHOLE_ETC" "$DNSMASQ_D" || true
 
 # Pi-hole upstream uses s6-overlay; typical entrypoint is /s6-init

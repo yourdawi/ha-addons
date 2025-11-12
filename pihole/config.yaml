@@ -1,5 +1,5 @@
 name: Pi-hole
-version: 0.0.3
+version: 0.0.4
 slug: pihole
 description: "Network-wide ad blocking via Pi-hole inside Home Assistant"
 arch:
