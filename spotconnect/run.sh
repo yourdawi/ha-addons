@@ -22,7 +22,7 @@ WORKDIR="/opt/spotconnect"
 mkdir -p "$WORKDIR"
 
 UPSTREAM_API="https://api.github.com/repos/philippe44/SpotConnect/releases/latest"
-VERSION_FILE="/config/spotconnect/.version"
+VERSION_FILE="/config/spotconnect/version.txt"
 
 fetch_latest_version() {
   local tag
@@ -96,14 +96,16 @@ select_binary() {
 LATEST_VERSION=$(fetch_latest_version)
 CURRENT_VERSION="none"
 if [ -f "$VERSION_FILE" ]; then
-  CURRENT_VERSION=$(cat "$VERSION_FILE")
+  CURRENT_VERSION=$(cat "$VERSION_FILE" 2>/dev/null || echo "none")
 fi
 
-if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ] || [ "$CACHE_BINARIES" != "true" ]; then
-  bashio::log.info "Updating SpotConnect from ${CURRENT_VERSION} to ${LATEST_VERSION}" 
+# Entscheide Update anhand cache_binaries und Versionsvergleich
+if ! bashio::config.true 'cache_binaries' || [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
+  bashio::log.info "Updating SpotConnect from ${CURRENT_VERSION} to ${LATEST_VERSION}"
   rm -rf "$WORKDIR"/*
   download_release "$LATEST_VERSION"
   echo "$LATEST_VERSION" > "$VERSION_FILE"
+  chmod 644 "$VERSION_FILE" || true
 else
   bashio::log.info "Using cached SpotConnect version ${CURRENT_VERSION}"
 fi
@@ -111,16 +113,15 @@ fi
 BIN_PATH=$(select_binary)
 chmod +x "$BIN_PATH"
 
-CONFIG_FILE="$CONFIG_DIR/config.xml"
-if [ ! -f "$CONFIG_FILE" ]; then
-  bashio::log.info "Generating default config file at $CONFIG_FILE"
-  # Try generating reference config; ignore failure for minimal binary
-  "$BIN_PATH" -i "$CONFIG_FILE" -Z || true
-fi
-
 bashio::log.info "Starting SpotConnect (${LATEST_VERSION}) with mode: $SPOTCONNECT_MODE"
 
-CMD_ARGS=( -Z -x "$CONFIG_FILE" -J "$CONFIG_DIR" -I )
+CMD_ARGS=( -Z -J "$CONFIG_DIR" -I )
+
+# Use specific config file only if it exists and is non-empty
+CONFIG_FILE="$CONFIG_DIR/config.xml"
+if [ -s "$CONFIG_FILE" ]; then
+  CMD_ARGS+=( -x "$CONFIG_FILE" )
+fi
 
 # Map optional settings to CLI
 if [ -n "${NAME_FORMAT:-}" ]; then
