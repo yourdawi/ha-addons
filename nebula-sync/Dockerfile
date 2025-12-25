@@ -12,4 +12,4 @@ COPY --chmod=0755 run.sh /run.sh
 
 WORKDIR /config
 
-CMD ["/run.sh"]
+ENTRYPOINT ["/run.sh"]
