@@ -8,8 +8,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Therefore avoid running apt/dnf inside the image; just copy the wrapper
 # and exec the upstream binary or passed command.
 
-COPY run.sh /run.sh
-RUN chmod a+x /run.sh || true
+COPY --chmod=0755 run.sh /run.sh
 
 WORKDIR /config
 
