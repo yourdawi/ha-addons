@@ -1,15 +1,9 @@
 ARG BUILD_FROM
 FROM $BUILD_FROM
 
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-# Use upstream image as-is. Many upstream images are minimal/non-debian
-# and do not support package manager operations during a build step.
-# Therefore avoid running apt/dnf inside the image; just copy the wrapper
-# and exec the upstream binary or passed command.
-
-COPY --chmod=0755 run.sh /run.sh
+# Use upstream image as-is. Do not override its Entrypoint — the upstream
+# image already provides the `nebula-sync` binary and entry behaviour.
+# This keeps the image identical to the upstream image and avoids issues
+# with non-root build users when running build-time commands.
 
 WORKDIR /config
-
-ENTRYPOINT ["/run.sh"]
