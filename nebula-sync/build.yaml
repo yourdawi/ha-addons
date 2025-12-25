@@ -1,5 +1,0 @@
----
-build_from:
-  aarch64: ghcr.io/lovelaze/nebula-sync:latest
-  amd64: ghcr.io/lovelaze/nebula-sync:latest
-  armv7: ghcr.io/lovelaze/nebula-sync:latest
