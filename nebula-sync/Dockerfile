@@ -3,18 +3,13 @@ FROM $BUILD_FROM
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update \
- && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    curl \
-    jq \
-    bash \
- && rm -rf /var/lib/apt/lists/*
+# Use upstream image as-is. Many upstream images are minimal/non-debian
+# and do not support package manager operations during a build step.
+# Therefore avoid running apt/dnf inside the image; just copy the wrapper
+# and exec the upstream binary or passed command.
 
 COPY run.sh /run.sh
-RUN chmod a+x /run.sh
+RUN chmod a+x /run.sh || true
 
 WORKDIR /config
 

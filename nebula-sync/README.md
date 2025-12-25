@@ -12,7 +12,3 @@ Configuration
 Usage
 - Edit the add-on options in Home Assistant UI or place them in `/data/options.json`.
 - The wrapper exports the options as environment variables consumed by the upstream image.
-
-Notes
-- The run script will attempt to exec a `nebula-sync` binary from PATH. If the upstream image provides a different binary or a custom entrypoint that expects arguments, the Dockerfile uses `/run.sh` as the container `CMD` — this matches other add-ons in this repository.
-- If you want me to adapt the wrapper to call a specific command or to preserve an upstream entrypoint, tell me which command the upstream image expects and I will update the files.
