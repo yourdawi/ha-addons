@@ -6,6 +6,7 @@ This repository hosts multiple Home Assistant add-ons. Add this repository once 
 ## Add-ons
 - SpotConnect — virtual AirPlay/DLNA devices for Spotify Connect. See `spotconnect/README.md` for details.
 - Pi-hole — network-wide ad blocking (DNS sinkhole). See `pihole/README.md` for details.
+- nebula-sync - sync multiple PiHoles. See `nebula-sync/README.md` for details.
 
 
 ## How to add this repository
