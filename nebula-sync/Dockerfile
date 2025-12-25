@@ -1,9 +1,13 @@
 ARG BUILD_FROM
 FROM $BUILD_FROM
 
-# Use upstream image as-is. Do not override its Entrypoint — the upstream
-# image already provides the `nebula-sync` binary and entry behaviour.
-# This keeps the image identical to the upstream image and avoids issues
-# with non-root build users when running build-time commands.
+# Use upstream image as base but run a tiny wrapper to export add-on options
+# as environment variables and then exec the upstream binary. We call the
+# wrapper via `sh /run.sh` so it works even if the upstream base image
+# does not mark the file executable or runs as a non-root user during build.
+
+COPY run.sh /run.sh
 
 WORKDIR /config
+
+ENTRYPOINT ["sh", "/run.sh"]
