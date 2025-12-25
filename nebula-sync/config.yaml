@@ -1,0 +1,30 @@
+name: Nebula-Sync
+version: 0.0.1
+slug: nebula-sync
+description: "Synchronize PiHole across multiple devices using nebula-sync"
+arch:
+  - aarch64
+  - amd64
+  - armv7
+host_network: false
+init: false
+startup: services
+boot: auto
+url: https://github.com/lovelaze/nebula-sync
+webui: ""
+map:
+  - config:rw
+privileged: []
+ports: {}
+options:
+  primary: "http://ph1.example.com|password"
+  replicas: "http://ph2.example.com|password,http://ph3.example.com|password"
+  full_sync: true
+  run_gravity: true
+  cron: "0 * * * *"
+schema:
+  primary: str
+  replicas: str?
+  full_sync: bool?
+  run_gravity: bool?
+  cron: str?
