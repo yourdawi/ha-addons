@@ -11,7 +11,7 @@ init: false
 startup: services
 boot: auto
 url: https://github.com/lovelaze/nebula-sync
-webui: ""
+webui: "http://[HOST]:[PORT:80]/"
 map:
   - config:rw
 privileged: []
