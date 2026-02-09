@@ -1,0 +1,27 @@
+name: "Bambulab Filament Watcher"
+description: "Monitors Bambulab store for filament stock status and reports via MQTT"
+version: "1.0.0"
+slug: "bambulab_filament_watcher"
+init: false
+arch:
+  - amd64
+  - aarch64
+  - armv7
+  - armhf
+  - i386
+options:
+  mqtt_broker: "core-mosquitto"
+  mqtt_port: 1883
+  mqtt_user: ""
+  mqtt_password: ""
+  check_interval: 300
+schema:
+  mqtt_broker: str
+  mqtt_port: int
+  mqtt_user: str?
+  mqtt_password: password?
+  check_interval: int
+startup: application
+boot: auto
+map:
+  - config:rw

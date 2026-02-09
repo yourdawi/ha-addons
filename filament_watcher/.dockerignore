@@ -1,0 +1,9 @@
+CHANGELOG.md
+__pycache__/
+*.pyc
+*.pyo
+.git/
+.gitignore
+.vscode/
+*.md
+!README.md
