@@ -5,7 +5,7 @@ ARG BFW_REPO=yourdawi/bambulab-filament-watcher
 ARG BFW_VERSION=v1.0.0
 
 RUN apk add --no-cache python3 py3-pip curl tar && \
-    python3 -m pip install --no-cache-dir requests beautifulsoup4 paho-mqtt==1.6.1 flask urllib3 waitress
+    python3 -m pip install --break-system-packages --no-cache-dir requests beautifulsoup4 paho-mqtt==1.6.1 flask urllib3 waitress
 
 WORKDIR /app
 
