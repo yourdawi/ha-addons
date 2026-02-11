@@ -6,7 +6,7 @@ This repository hosts multiple Home Assistant add-ons. Add this repository once 
 ## Add-ons
 - SpotConnect — virtual AirPlay/DLNA devices for Spotify Connect. See `spotconnect/README.md` for details.
 - Pi-hole — network-wide ad blocking (DNS sinkhole). See `pihole/README.md` for details.
-
+- Bambulab Filament watcher - Tracks Bambulab Filament Inventory. See `bfw/README.md` for details.
 
 ## How to add this repository
 1. In Home Assistant go to Settings → Add-ons → Add-on Store → Repositories.
