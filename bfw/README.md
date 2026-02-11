@@ -2,36 +2,21 @@
 
 This folder contains the Home Assistant add-on definition.
 
-The add-on does **not** include app source code directly.  
-It downloads a packaged app release from:
+The add-on runtime is provided by a prebuilt GHCR image published from the app repository:
 
-- `https://github.com/yourdawi/bambulab-filament-watcher`
+- `ghcr.io/yourdawi/bfw-app`
 
-## Files in This Folder
+## Files
 
-- `config.yaml` - Home Assistant add-on metadata and options schema
-- `Dockerfile` - builds the add-on image and downloads the app package
-- `build.yaml` - multi-architecture base image mapping
+- `config.yaml` - add-on metadata and options schema
+- `Dockerfile` - minimal image definition (`FROM ${BFW_IMAGE}`)
+- `build.yaml` - architecture mapping + image argument
 
-## How Versioning Works
+## Versioning
 
-`Dockerfile` contains:
+Version pinning is controlled in `build.yaml`:
 
-```dockerfile
-ARG BFW_VERSION=v2.1.0
+```yaml
+args:
+  BFW_IMAGE: ghcr.io/yourdawi/bfw-app:latest
 ```
-
-That value must match an existing release asset in the app repository:
-
-`bfw-app-v2.1.0.tar.gz`
-
-
-## Optional Repository Override
-
-You can also change:
-
-```dockerfile
-ARG BFW_REPO=yourdawi/bambulab-filament-watcher
-```
-
-to point to a fork or another owner.

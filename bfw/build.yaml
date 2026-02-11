@@ -4,5 +4,4 @@ build_from:
   armhf: ghcr.io/home-assistant/armhf-base:3.21
   armv7: ghcr.io/home-assistant/armv7-base:3.21
 args:
-  BFW_REPO: yourdawi/bambulab-filament-watcher
-  BFW_VERSION: v1.0.0
+  BFW_IMAGE: ghcr.io/yourdawi/bfw-app:latest
