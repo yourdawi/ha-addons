@@ -1,5 +1,5 @@
 name: Bambu Lab Filament Watcher
-version: "1.0.0"
+version: "1.0.1"
 slug: bfw
 description: Tracks Bambu Lab filament stock with a web interface and optional MQTT publishing.
 author: Dawi
